@@ -1,45 +1,60 @@
 {
-  "name": "code-cutter",
-  "displayName": "Code Cutter",
-  "description": "Code Cutter allows you to cut, copy and paste methods",
-  "version": "0.0.1",
+  "name": "code-axe",
+  "displayName": "Code Axe",
+  "description": "Code Axe allows you to cut, copy and paste methods",
+  "version": "0.1.1",
+  "publisher": "nikiforovall",
+  "author": {
+    "email": "alexey.nikiforovall@gmail.com",
+    "name": "Oleksii Nikiforov",
+    "url": "https://github.com/NikiforovAll"
+  },
   "engines": {
     "vscode": "^1.93.0"
   },
   "categories": [
     "Other"
   ],
+  "icon": "assets/icon.jpeg",
+  "bugs": {
+    "url": "https://github.com/NikiforovAll/vsc-code-axe/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NikiforovAll/vsc-code-axe/vsc-code-axe.git"
+  },
+  "homepage": "https://github.com/NikiforovAll/vsc-code-axe/blob/master/README.md",
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "code-cutter.expandMethod",
-        "title": "Code Cutter: Expand Method"
+        "command": "code-axe.expandMethod",
+        "title": "Code Axe: Expand Method"
       },
       {
-        "command": "code-cutter.copyMethod",
-        "title": "Code Cutter: Copy Method"
+        "command": "code-axe.copyMethod",
+        "title": "Code Axe: Copy Method"
       },
       {
-        "command": "code-cutter.cutMethod",
-        "title": "Code Cutter: Cut Method"
+        "command": "code-axe.cutMethod",
+        "title": "Code Axe: Cut Method"
       }
     ],
     "keybindings": [
       {
-        "command": "code-cutter.expandMethod",
-        "key": "ctrl+m ctrl+e",
-        "mac": "cmd+m cmd+e"
+        "command": "code-axe.expandMethod",
+        "key": "ctrl+m e",
+        "mac": "cmd+m e"
       },
       {
-        "command": "code-cutter.copyMethod",
-        "key": "ctrl+m ctrl+c",
+        "command": "code-axe.copyMethod",
+        "key": "ctrl+m c",
         "mac": "cmd+m cmd+c"
       },
       {
-        "command": "code-cutter.cutMethod",
-        "key": "ctrl+m ctrl+x",
+        "command": "code-axe.cutMethod",
+        "key": "ctrl+m x",
         "mac": "cmd+m cmd+x"
       }
     ]
@@ -56,7 +71,8 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "vscode:publish": "vsce publish"
   },
   "devDependencies": {
     "@types/vscode": "^1.93.0",

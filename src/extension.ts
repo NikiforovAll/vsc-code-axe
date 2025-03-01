@@ -2,11 +2,11 @@ import * as vscode from "vscode";
 import { ExpanderManager } from "./ExpandManager";
 
 export function activate(context: vscode.ExtensionContext) {
-    const outputChannel = vscode.window.createOutputChannel("Code Cutter");
+    const outputChannel = vscode.window.createOutputChannel("Code Axe");
     var exp = new ExpanderManager(outputChannel);
 
     const expandMethod = vscode.commands.registerCommand(
-        "code-cutter.expandMethod",
+        "code-axe.expandMethod",
         async (uri: vscode.Uri) => {
             if (!exp) {
                 exp = new ExpanderManager(outputChannel);
@@ -16,12 +16,22 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     const copyMethod = vscode.commands.registerCommand(
-        "code-cutter.copyMethod",
-        (uri: vscode.Uri) => {}
+        "code-axe.copyMethod",
+        (uri: vscode.Uri) => {
+            if (!exp) {
+                exp = new ExpanderManager(outputChannel);
+            }
+            exp.copyFunctionUnderCursor();
+        }
     );
     const cutMethod = vscode.commands.registerCommand(
-        "code-cutter.cutMethod",
-        (uri: vscode.Uri) => {}
+        "code-axe.cutMethod",
+        (uri: vscode.Uri) => {
+            if (!exp) {
+                exp = new ExpanderManager(outputChannel);
+            }
+            exp.cutFunctionUnderCursor();
+        }
     );
 
     context.subscriptions.push(expandMethod, copyMethod, cutMethod);

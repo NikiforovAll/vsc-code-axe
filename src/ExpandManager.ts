@@ -4,17 +4,46 @@ export class ExpanderManager {
     constructor(outputChannel: vscode.OutputChannel) {
         this.outputChannel = outputChannel;
     }
-    expandHistory: Array<
-        Array<{
-            start: vscode.Position;
-            end: vscode.Position;
-            resultStart: vscode.Position;
-            resultEnd: vscode.Position;
-            index: number;
-        }>
-    > = [];
-
     async expandToFunctionUnderCursor() {
+        var selection = await this.findFuncSelectionUnderCursor();
+
+        if (selection) {
+            const editor = vscode.window.activeTextEditor;
+            if (editor) {
+                editor.selection = selection;
+                editor.revealRange(selection);
+            }
+        }
+    }
+
+    async copyFunctionUnderCursor() {
+        var selection = await this.findFuncSelectionUnderCursor();
+
+        if (selection) {
+            const editor = vscode.window.activeTextEditor;
+            if (editor) {
+                const text = editor.document.getText(selection);
+                vscode.env.clipboard.writeText(text);
+            }
+        }
+    }
+
+    async cutFunctionUnderCursor() {
+        var selection = await this.findFuncSelectionUnderCursor();
+
+        if (selection) {
+            const editor = vscode.window.activeTextEditor;
+            if (editor) {
+                const text = editor.document.getText(selection);
+                vscode.env.clipboard.writeText(text);
+                editor.edit((editBuilder) => {
+                    editBuilder.delete(selection!);
+                });
+            }
+        }
+    }
+
+    private async findFuncSelectionUnderCursor() {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             return;
@@ -52,10 +81,7 @@ export class ExpanderManager {
                     functionSymbol.range.start,
                     functionSymbol.range.end
                 );
-
-                // Set the editor selection to the function range
-                editor.selection = selection;
-                editor.revealRange(selection);
+                return selection;
             } else {
                 this.outputChannel.appendLine(
                     "No function found containing cursor position"
