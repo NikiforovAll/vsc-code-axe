@@ -2,7 +2,7 @@
   "name": "code-axe",
   "displayName": "Code Axe",
   "description": "Code Axe allows you to cut, copy and paste methods",
-  "version": "0.1.1",
+  "version": "0.2.2",
   "publisher": "nikiforovall",
   "author": {
     "email": "alexey.nikiforovall@gmail.com",
@@ -39,6 +39,10 @@
       {
         "command": "code-axe.cutMethod",
         "title": "Code Axe: Cut Method"
+      },
+      {
+        "command": "code-axe.sortDescendantMethodsUnderCursor",
+        "title": "Code Axe: Sort Method Topologically"
       }
     ],
     "keybindings": [
@@ -56,6 +60,11 @@
         "command": "code-axe.cutMethod",
         "key": "ctrl+m x",
         "mac": "cmd+m cmd+x"
+      },
+      {
+        "command": "code-axe.sortDescendantMethodsUnderCursor",
+        "key": "ctrl+m s",
+        "mac": "cmd+m cmd+s"
       }
     ]
   },

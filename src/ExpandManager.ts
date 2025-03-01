@@ -102,9 +102,8 @@ export class ExpanderManager {
             if (symbol.range.contains(position)) {
                 // Check if this is a function/method
                 if (
-                    symbol.kind === vscode.SymbolKind.Function ||
-                    symbol.kind === vscode.SymbolKind.Method ||
-                    symbol.kind === vscode.SymbolKind.Constructor
+                    (symbol.kind === vscode.SymbolKind.Function ||
+                    symbol.kind === vscode.SymbolKind.Method) && symbol.name !== ".ctor"
                 ) {
                     // Check if there's an inner function that contains the position
                     if (symbol.children && symbol.children.length > 0) {

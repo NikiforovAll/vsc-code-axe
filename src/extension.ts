@@ -1,9 +1,11 @@
 import * as vscode from "vscode";
 import { ExpanderManager } from "./ExpandManager";
+import { SorterManager } from "./SorterManager";
 
 export function activate(context: vscode.ExtensionContext) {
     const outputChannel = vscode.window.createOutputChannel("Code Axe");
     var exp = new ExpanderManager(outputChannel);
+    var srt = new SorterManager(outputChannel);
 
     const expandMethod = vscode.commands.registerCommand(
         "code-axe.expandMethod",
@@ -34,7 +36,22 @@ export function activate(context: vscode.ExtensionContext) {
         }
     );
 
-    context.subscriptions.push(expandMethod, copyMethod, cutMethod);
+    const sortDescendantMethodsUnderCursor = vscode.commands.registerCommand(
+        "code-axe.sortDescendantMethodsUnderCursor",
+        (uri: vscode.Uri) => {
+            if (!exp) {
+                srt = new SorterManager(outputChannel);
+            }
+            srt.sortDescendantMethodsUnderCursor();
+        }
+    );
+
+    context.subscriptions.push(
+        expandMethod,
+        copyMethod,
+        cutMethod,
+        sortDescendantMethodsUnderCursor
+    );
 }
 
 export function deactivate() {}
