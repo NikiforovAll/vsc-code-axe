@@ -55,7 +55,7 @@ export class SorterManager {
             this.outputChannel.appendLine(`- ${method.name}`);
         }
         if (sortedMethods.length > 1) {
-            await this.reorderMethods(document, sortedMethods);
+            await this.reorderMethods(functionSymbol, document, sortedMethods);
         }
     }
 
@@ -240,6 +240,7 @@ export class SorterManager {
     }
 
     private async reorderMethods(
+        targetMethod: vscode.DocumentSymbol,
         document: vscode.TextDocument,
         sortedMethods: vscode.DocumentSymbol[]
     ): Promise<void> {
@@ -261,10 +262,30 @@ export class SorterManager {
         }
 
         // Extract the text of each method and its range
-        const methodTexts: { text: string; range: vscode.Range }[] = [];
+        const methodTexts: {
+            text: string;
+            range: vscode.Range;
+            rangeWithWhitespaces: vscode.Range;
+            textWithWhitespaces: string;
+        }[] = [];
         for (const method of methodsInDocumentOrder) {
             const methodText = document.getText(method.range);
-            methodTexts.push({ text: methodText, range: method.range });
+            const rangeWithWhitespaces = new vscode.Range(
+                    new vscode.Position(method.range.start.line, 0),
+                    new vscode.Position(
+                        method.range.end.line,
+                        document.lineAt(
+                            method.range.end.line
+                        ).range.end.character
+                    )
+                );
+            const methodTextWithWhitespaces = document.getText(rangeWithWhitespaces);
+            methodTexts.push({
+                text: methodText,
+                range: method.range,
+                rangeWithWhitespaces: rangeWithWhitespaces,
+                textWithWhitespaces: methodTextWithWhitespaces,
+            });
         }
 
         // Create a sorted list of method texts based on the dependency order
@@ -290,31 +311,41 @@ export class SorterManager {
         await editor.edit((editBuilder) => {
             // Delete all methods from bottom to top to avoid position shifting
             for (let i = methodTexts.length - 1; i >= 0; i--) {
-                editBuilder.delete(methodTexts[i].range);
+                // Create a range that spans from the start of the first line to the end of the last line including line break
+                const startLine = methodTexts[i].rangeWithWhitespaces.start.line;
+                const endLine = methodTexts[i].rangeWithWhitespaces.end.line;
+
+                // Create a range from the start of the first line to the end of the last line (including line break)
+                const rangeToDelete = new vscode.Range(
+                    new vscode.Position(startLine, 0),
+                    document.lineAt(endLine).rangeIncludingLineBreak.end
+                );
+
+                editBuilder.delete(rangeToDelete);
+
                 // Delete any whitespace lines after the method
-                const endLine = methodTexts[i].range.end.line;
-                const nextLine = endLine + 1;
-                if (nextLine < document.lineCount) {
+                let nextLine = endLine + 1;
+                while (nextLine < document.lineCount) {
                     const nextLineText = document.lineAt(nextLine).text;
-                    if (nextLineText.trim() === "") {
-                        const whitespaceRange = new vscode.Range(
-                            new vscode.Position(nextLine, 0),
-                            new vscode.Position(nextLine + 1, 0)
-                        );
-                        editBuilder.delete(whitespaceRange);
+                    if (nextLineText.trim() !== "") {
+                        break;
                     }
+                    editBuilder.delete(document.lineAt(nextLine).rangeIncludingLineBreak);
+                    nextLine++;
                 }
             }
 
-            // Insert all methods in the new order at the position of the first method
+            // Insert all methods in the new order
             if (methodTexts.length > 0) {
-                const firstMethodPosition = methodTexts[0].range.start;
-                const newText = sortedMethodTexts.map((m) => m.text).join("\n");
-                editBuilder.insert(firstMethodPosition, newText);
+                const firstMethodPosition = new vscode.Position(
+                    targetMethod.range.start.line,
+                    0
+                );
+                const newText = sortedMethodTexts
+                    .map((m) => m.textWithWhitespaces)
+                    .join("\n\n");
+                editBuilder.insert(firstMethodPosition, newText.concat("\n\n"));
             }
         });
-
-        // Format the document after reordering methods
-        await vscode.commands.executeCommand("editor.action.formatDocument");
     }
 }
