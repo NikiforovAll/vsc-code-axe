@@ -49,7 +49,7 @@ export class SorterManager {
 
         // Log the recommended order
         this.outputChannel.appendLine(
-            "\nRecommended method order based on dependencies:"
+            "Recommended method order based on dependencies:"
         );
         for (const method of sortedMethods) {
             this.outputChannel.appendLine(`- ${method.name}`);
@@ -186,28 +186,51 @@ export class SorterManager {
 
             // Remove comments and strings to avoid false positives
             const cleanedMethodText = methodText
-                .replace(/\/\/.*$/gm, "")         // Remove single-line comments
+                .replace(/\/\/.*$/gm, "") // Remove single-line comments
                 .replace(/\/\*[\s\S]*?\*\//g, "") // Remove multi-line comments
-                .replace(/"(?:\\"|[^"])*"/g, '')  // Remove double-quoted strings
-                .replace(/'(?:\\'|[^'])*'/g, '')  // Remove single-quoted strings
-                .replace(/`(?:\\`|[^`])*`/g, ''); // Remove template literals
+                .replace(/"(?:\\"|[^"])*"/g, "") // Remove double-quoted strings
+                .replace(/'(?:\\'|[^'])*'/g, "") // Remove single-quoted strings
+                .replace(/`(?:\\`|[^`])*`/g, ""); // Remove template literals
 
             // Track called methods with their positions
-            const calledMethodPositions: { method: string, position: number }[] = [];
+            const calledMethodPositions: {
+                method: string;
+                position: number;
+            }[] = [];
 
             // Find method calls in the current method
             for (const calledMethod of methods) {
                 if (calledMethod.name !== methodName) {
                     const methodPatterns = [
                         // Direct call (not preceded by a dot or other identifier character)
-                        new RegExp(`(?<!\\.\\s*)\\b${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g"),
+                        new RegExp(
+                            `(?<!\\.\\s*)\\b${this.escapeRegExp(
+                                calledMethod.name
+                            )}\\s*\\(`,
+                            "g"
+                        ),
 
                         // Call with this.
-                        new RegExp(`this\\.${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g"),
+                        new RegExp(
+                            `this\\.${this.escapeRegExp(
+                                calledMethod.name
+                            )}\\s*\\(`,
+                            "g"
+                        ),
 
                         // Call with super.
-                        new RegExp(`super\\.${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g"),
-                        new RegExp(`base\\.${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g")
+                        new RegExp(
+                            `super\\.${this.escapeRegExp(
+                                calledMethod.name
+                            )}\\s*\\(`,
+                            "g"
+                        ),
+                        new RegExp(
+                            `base\\.${this.escapeRegExp(
+                                calledMethod.name
+                            )}\\s*\\(`,
+                            "g"
+                        ),
                     ];
 
                     // Find the earliest occurrence of the method call
@@ -219,16 +242,21 @@ export class SorterManager {
                         // Need to reset the RegExp before using it with exec in a loop
                         pattern.lastIndex = 0;
 
-                        while ((match = pattern.exec(cleanedMethodText)) !== null) {
+                        while (
+                            (match = pattern.exec(cleanedMethodText)) !== null
+                        ) {
                             isMethodCalled = true;
-                            earliestPosition = Math.min(earliestPosition, match.index);
+                            earliestPosition = Math.min(
+                                earliestPosition,
+                                match.index
+                            );
                         }
                     }
 
                     if (isMethodCalled) {
                         calledMethodPositions.push({
                             method: calledMethod.name,
-                            position: earliestPosition
+                            position: earliestPosition,
                         });
                     }
                 }
@@ -238,7 +266,9 @@ export class SorterManager {
             calledMethodPositions.sort((a, b) => a.position - b.position);
 
             // Add dependencies in order of appearance
-            const dependencies = calledMethodPositions.map(item => item.method);
+            const dependencies = calledMethodPositions.map(
+                (item) => item.method
+            );
             graph.set(methodName, dependencies);
         }
 
@@ -304,17 +334,25 @@ export class SorterManager {
             return;
         }
 
-        // Extract the text of each method and its range
+        // Extract the text of each method and its range, including preceding comments
         const methodTexts: {
             text: string;
             range: vscode.Range;
             rangeWithWhitespaces: vscode.Range;
             textWithWhitespaces: string;
         }[] = [];
+
         for (const method of methodsInDocumentOrder) {
             const methodText = document.getText(method.range);
+
+            // Find preceding comments for this method
+            const commentStartLine = this.findPrecedingCommentStartLine(
+                document,
+                method.range.start.line
+            );
+
             const rangeWithWhitespaces = new vscode.Range(
-                new vscode.Position(method.range.start.line, 0),
+                new vscode.Position(commentStartLine, 0),
                 new vscode.Position(
                     method.range.end.line,
                     document.lineAt(method.range.end.line).range.end.character
@@ -382,8 +420,12 @@ export class SorterManager {
 
             // Insert all methods in the new order
             if (methodTexts.length > 0) {
+                const commentStartLine = this.findPrecedingCommentStartLine(
+                    document,
+                    targetMethod.range.start.line
+                );
                 const firstMethodPosition = new vscode.Position(
-                    targetMethod.range.start.line,
+                    commentStartLine,
                     0
                 );
                 const newText = sortedMethodTexts
@@ -392,5 +434,35 @@ export class SorterManager {
                 editBuilder.insert(firstMethodPosition, newText.concat("\n\n"));
             }
         });
+    }
+
+    /**
+     * Find the starting line of comments that precede a method
+     * @param document The text document
+     * @param methodStartLine The starting line of the method
+     * @returns The line where comments start or the method start line if no comments
+     */
+    private findPrecedingCommentStartLine(
+        document: vscode.TextDocument,
+        methodStartLine: number
+    ): number {
+        let currentLine = methodStartLine;
+        let foundComment = false;
+
+        // Go backwards from the method start line
+        while (currentLine >= 0) {
+            const lineText = document.lineAt(currentLine - 1).text.trim();
+
+            // If line starts with a comment
+            if (lineText.startsWith("//")) {
+                foundComment = true;
+                currentLine--;
+                continue;
+            }
+
+            break;
+        }
+
+        return foundComment ? currentLine : methodStartLine;
     }
 }

@@ -76,9 +76,27 @@ export class ExpanderManager {
                     `Found function: ${functionSymbol.name}`
                 );
 
-                // Create a new selection for the entire function
+                // Find preceding comments
+                const functionStartLine = functionSymbol.range.start.line;
+                let commentStartLine = functionStartLine;
+
+                // Scan upward to find comment lines
+                for (let lineNum = functionStartLine - 1; lineNum >= 0; lineNum--) {
+                    const line = document.lineAt(lineNum).text.trim();
+
+                    // Check if the line is a comment
+                    if (line.startsWith('//') || line.startsWith('/*')) {
+                        commentStartLine = lineNum;
+                    } else {
+                        // If we find a non-comment line, stop scanning
+                        break;
+                    }
+                }
+
+                // Create a new selection for the entire function including comments
+                const expandedStart = new vscode.Position(commentStartLine, 0);
                 const selection = new vscode.Selection(
-                    functionSymbol.range.start,
+                    expandedStart,
                     functionSymbol.range.end
                 );
                 return selection;
