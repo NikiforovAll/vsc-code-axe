@@ -79,3 +79,7 @@ public class TestMethod
     }
 }
 ```
+
+## Known Issues
+
+* Method overloading is not supported. It will be added in the future.

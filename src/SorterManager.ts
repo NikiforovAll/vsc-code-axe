@@ -149,7 +149,10 @@ export class SorterManager {
         const methods: vscode.DocumentSymbol[] = [];
 
         const traverse = (symbols: vscode.DocumentSymbol[]) => {
-            for (const symbol of symbols) {
+            const sortedSymbols = symbols.sort(
+                (a, b) => a.range.start.line - b.range.start.line
+            );
+            for (const symbol of sortedSymbols) {
                 if (
                     (symbol.kind === vscode.SymbolKind.Function ||
                         symbol.kind === vscode.SymbolKind.Method) &&
@@ -181,22 +184,62 @@ export class SorterManager {
             // Get the method text
             const methodText = document.getText(method.range);
 
+            // Remove comments and strings to avoid false positives
+            const cleanedMethodText = methodText
+                .replace(/\/\/.*$/gm, "")         // Remove single-line comments
+                .replace(/\/\*[\s\S]*?\*\//g, "") // Remove multi-line comments
+                .replace(/"(?:\\"|[^"])*"/g, '')  // Remove double-quoted strings
+                .replace(/'(?:\\'|[^'])*'/g, '')  // Remove single-quoted strings
+                .replace(/`(?:\\`|[^`])*`/g, ''); // Remove template literals
+
+            // Track called methods with their positions
+            const calledMethodPositions: { method: string, position: number }[] = [];
+
             // Find method calls in the current method
             for (const calledMethod of methods) {
                 if (calledMethod.name !== methodName) {
-                    // Check if this method calls the other method
-                    // This is a simple check that looks for method name followed by (
-                    const regex = new RegExp(
-                        `\\b${this.escapeRegExp(calledMethod.name)}\\s*\\(`,
-                        "g"
-                    );
-                    if (regex.test(methodText)) {
-                        const dependencies = graph.get(methodName) || [];
-                        dependencies.push(calledMethod.name);
-                        graph.set(methodName, dependencies);
+                    const methodPatterns = [
+                        // Direct call (not preceded by a dot or other identifier character)
+                        new RegExp(`(?<!\\.\\s*)\\b${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g"),
+
+                        // Call with this.
+                        new RegExp(`this\\.${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g"),
+
+                        // Call with super.
+                        new RegExp(`super\\.${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g"),
+                        new RegExp(`base\\.${this.escapeRegExp(calledMethod.name)}\\s*\\(`, "g")
+                    ];
+
+                    // Find the earliest occurrence of the method call
+                    let earliestPosition = Number.MAX_SAFE_INTEGER;
+                    let isMethodCalled = false;
+
+                    for (const pattern of methodPatterns) {
+                        let match;
+                        // Need to reset the RegExp before using it with exec in a loop
+                        pattern.lastIndex = 0;
+
+                        while ((match = pattern.exec(cleanedMethodText)) !== null) {
+                            isMethodCalled = true;
+                            earliestPosition = Math.min(earliestPosition, match.index);
+                        }
+                    }
+
+                    if (isMethodCalled) {
+                        calledMethodPositions.push({
+                            method: calledMethod.name,
+                            position: earliestPosition
+                        });
                     }
                 }
             }
+
+            // Sort called methods by their position in the text
+            calledMethodPositions.sort((a, b) => a.position - b.position);
+
+            // Add dependencies in order of appearance
+            const dependencies = calledMethodPositions.map(item => item.method);
+            graph.set(methodName, dependencies);
         }
 
         return graph;
@@ -271,15 +314,14 @@ export class SorterManager {
         for (const method of methodsInDocumentOrder) {
             const methodText = document.getText(method.range);
             const rangeWithWhitespaces = new vscode.Range(
-                    new vscode.Position(method.range.start.line, 0),
-                    new vscode.Position(
-                        method.range.end.line,
-                        document.lineAt(
-                            method.range.end.line
-                        ).range.end.character
-                    )
-                );
-            const methodTextWithWhitespaces = document.getText(rangeWithWhitespaces);
+                new vscode.Position(method.range.start.line, 0),
+                new vscode.Position(
+                    method.range.end.line,
+                    document.lineAt(method.range.end.line).range.end.character
+                )
+            );
+            const methodTextWithWhitespaces =
+                document.getText(rangeWithWhitespaces);
             methodTexts.push({
                 text: methodText,
                 range: method.range,
@@ -312,7 +354,8 @@ export class SorterManager {
             // Delete all methods from bottom to top to avoid position shifting
             for (let i = methodTexts.length - 1; i >= 0; i--) {
                 // Create a range that spans from the start of the first line to the end of the last line including line break
-                const startLine = methodTexts[i].rangeWithWhitespaces.start.line;
+                const startLine =
+                    methodTexts[i].rangeWithWhitespaces.start.line;
                 const endLine = methodTexts[i].rangeWithWhitespaces.end.line;
 
                 // Create a range from the start of the first line to the end of the last line (including line break)
@@ -330,7 +373,9 @@ export class SorterManager {
                     if (nextLineText.trim() !== "") {
                         break;
                     }
-                    editBuilder.delete(document.lineAt(nextLine).rangeIncludingLineBreak);
+                    editBuilder.delete(
+                        document.lineAt(nextLine).rangeIncludingLineBreak
+                    );
                     nextLine++;
                 }
             }
