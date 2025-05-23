@@ -10,6 +10,7 @@
 * `code-axe.cutMethod` (ctrl+M X) - Cut the method under the cursor and copy it to the clipboard.
 * `code-axe.copyMethod` (ctrl+M C) - Copy the method under the cursor to the clipboard.
 * `code-axe.expandMethod` (ctrl+M E) - Expand the method under the cursor.
+* `code-axe.goToDeclaration` (ctrl+M D) - Go to the method declaration under the cursor.
 
 <video src="https://github.com/user-attachments/assets/a78afd09-a065-4b5d-ad80-2613e99c323b" controls="controls">
 </video>

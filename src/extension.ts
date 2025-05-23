@@ -46,11 +46,22 @@ export function activate(context: vscode.ExtensionContext) {
         }
     );
 
+    const goToMethodDeclaration = vscode.commands.registerCommand(
+        "code-axe.goToMethodDeclaration",
+        (uri: vscode.Uri) => {
+            if (!exp) {
+                exp = new ExpanderManager(outputChannel);
+            }
+            exp.goToFunctionDeclaration();
+        }
+    );
+
     context.subscriptions.push(
         expandMethod,
         copyMethod,
         cutMethod,
-        sortDescendantMethodsUnderCursor
+        sortDescendantMethodsUnderCursor,
+        goToMethodDeclaration
     );
 }
 

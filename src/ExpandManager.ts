@@ -43,6 +43,68 @@ export class ExpanderManager {
         }
     }
 
+    async goToFunctionDeclaration() {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            return;
+        }
+
+        const document = editor.document;
+        const position = editor.selection.active;
+
+        try {
+            // Get document symbols
+            const symbols = await vscode.commands.executeCommand<
+                vscode.DocumentSymbol[]
+            >("vscode.executeDocumentSymbolProvider", document.uri);
+
+            if (!symbols || symbols.length === 0) {
+                this.outputChannel.appendLine(
+                    "No symbols found in the document"
+                );
+                return;
+            }
+
+            // Find the innermost function containing the cursor
+            const functionSymbol = this.findFunctionContainingPosition(
+                symbols,
+                position
+            );
+
+            if (functionSymbol) {
+                this.outputChannel.appendLine(
+                    `Found function declaration: ${functionSymbol.name}`
+                );
+
+                // Position cursor after the method name
+                // Find the position after the function name
+                const functionNameStart = functionSymbol.selectionRange.start.character;
+                const functionNameEnd = functionNameStart + functionSymbol.name.length;
+
+                // Create position and move cursor
+                const newPosition = new vscode.Position(
+                    functionSymbol.selectionRange.start.line,
+                    functionNameEnd
+                );
+
+                // Set cursor position and reveal in editor
+                editor.selection = new vscode.Selection(newPosition, newPosition);
+                editor.revealRange(
+                    new vscode.Range(newPosition, newPosition),
+                    vscode.TextEditorRevealType.InCenter
+                );
+            } else {
+                this.outputChannel.appendLine(
+                    "No function found containing cursor position"
+                );
+            }
+        } catch (error) {
+            this.outputChannel.appendLine(
+                `Error going to function declaration: ${error}`
+            );
+        }
+    }
+
     private async findFuncSelectionUnderCursor() {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
