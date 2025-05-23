@@ -114,21 +114,26 @@ export class ExpanderManager {
 
     private findFunctionContainingPosition(
         symbols: vscode.DocumentSymbol[],
-        position: vscode.Position
+        position: vscode.Position,
+        parentSymbol?: vscode.DocumentSymbol
     ): vscode.DocumentSymbol | undefined {
         for (const symbol of symbols) {
             if (symbol.range.contains(position)) {
                 // Check if this is a function/method
                 if (
                     (symbol.kind === vscode.SymbolKind.Function ||
-                    symbol.kind === vscode.SymbolKind.Method) && symbol.name !== ".ctor"
+                    symbol.kind === vscode.SymbolKind.Method) &&
+                    symbol.name !== ".ctor" &&
+                    // Skip if the function has the same name as its parent class
+                    !(parentSymbol?.kind === vscode.SymbolKind.Class && parentSymbol.name === symbol.name)
                 ) {
                     // Check if there's an inner function that contains the position
                     if (symbol.children && symbol.children.length > 0) {
                         const innerFunction =
                             this.findFunctionContainingPosition(
                                 symbol.children,
-                                position
+                                position,
+                                symbol
                             );
                         if (innerFunction) {
                             return innerFunction;
@@ -141,7 +146,8 @@ export class ExpanderManager {
                 if (symbol.children && symbol.children.length > 0) {
                     const innerSymbol = this.findFunctionContainingPosition(
                         symbol.children,
-                        position
+                        position,
+                        symbol
                     );
                     if (innerSymbol) {
                         return innerSymbol;
